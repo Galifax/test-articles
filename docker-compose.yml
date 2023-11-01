@@ -1,0 +1,71 @@
+version: "3"
+
+services:
+  nginx:
+    container_name: nginx
+    image: nginx:stable-alpine
+    ports:
+      - 80:80
+    volumes:
+      - ./:/var/www/html
+      - .docker/app/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      test-articles:
+
+  app:
+    build:
+      context: .docker/app
+      dockerfile: Dockerfile
+    container_name: app
+    volumes:
+      - ./:/var/www/html
+    env_file: .docker/app/.env
+    ports:
+      - 5173:5173
+    networks:
+      test-articles:
+
+  pma:
+    container_name: pma
+    image: phpmyadmin:latest
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      PMA_HOST: mysql
+      UPLOAD_LIMIT: 300M
+    depends_on:
+      - mysql
+    networks:
+      test-articles:
+
+  mysql:
+    container_name: mysql
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_DATABASE: test-articles
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - .docker/mysql:/var/lib/mysql
+    ports:
+      - 3306:3306
+    networks:
+      test-articles:
+
+  redis:
+    container_name: redis
+    image: redis:alpine
+    hostname: redis
+    restart: always
+    command: "redis-server --appendonly yes --replica-read-only no"
+    ports:
+      - 6379:6379
+    networks:
+      test-articles:
+
+networks:
+  test-articles:
+    driver: bridge
